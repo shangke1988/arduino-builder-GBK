@@ -30,23 +30,35 @@
 package builder
 
 import (
-	"arduino.cc/builder/i18n"
+	"arduino.cc/builder/constants"
 	"arduino.cc/builder/types"
 	"arduino.cc/builder/utils"
 	"path/filepath"
+	"code.google.com/p/mahonia"
+	"github.com/go-errors/errors"
 )
 
 type SketchSaver struct{}
 
-func (s *SketchSaver) Run(ctx *types.Context) error {
-	sketch := ctx.Sketch
-	sketchBuildPath := ctx.SketchBuildPath
+func (s *SketchSaver) Run(context map[string]interface{}) error {
+	sketch := context[constants.CTX_SKETCH].(*types.Sketch)
+	sketchBuildPath := context[constants.CTX_SKETCH_BUILD_PATH].(string)
+	source := context[constants.CTX_SOURCE].(string)
 
 	err := utils.EnsureFolderExists(sketchBuildPath)
 	if err != nil {
-		return i18n.WrapError(err)
+		return utils.WrapError(err)
 	}
 
-	err = utils.WriteFile(filepath.Join(sketchBuildPath, filepath.Base(sketch.MainFile.Name)+".cpp"), ctx.Source)
-	return i18n.WrapError(err)
+	var enc mahonia.Encoder
+	enc = mahonia.NewEncoder("gbk")
+    if sourcegbk, ok := enc.ConvertStringOK(source); ok {
+		err = utils.WriteFile(filepath.Join(sketchBuildPath, filepath.Base(sketch.MainFile.Name)+".cpp"), sourcegbk)
+	} else {
+		err = errors.New("GBK: Error when convert from UFT8 to GBK")
+	}
+	
+	//err = utils.WriteFile(filepath.Join(sketchBuildPath, filepath.Base(sketch.MainFile.Name)+".cpp"), source)
+	
+	return utils.WrapError(err)
 }
